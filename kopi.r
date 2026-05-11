@@ -1,4 +1,4 @@
-# 1. Import data
+# 1. import data dari file csv dengan pengaturan separator dan encoding yang sesuai
 data <- read.csv(
   "D:/kopi.csv",
   sep = ";",
@@ -7,7 +7,7 @@ data <- read.csv(
   check.names = TRUE
 )
 
-# 2. Ambil kolom utama
+# 2. ambil hanya kolom utama yang akan digunakan dalam analisis
 data <- data[, c(
   "id",
   "jenis_kopi",
@@ -19,7 +19,7 @@ data <- data[, c(
   "tingkat_fokus"
 )]
 
-# 3. Ubah kolom numerik
+# 3. ubah kolom numerik agar bisa diproses dalam perhitungan statistik
 num_cols <- c(
   "kopi_ml",
   "susu_ml",
@@ -35,27 +35,27 @@ data[num_cols] <- lapply(data[num_cols], function(x) {
 
 data$jenis_kopi <- as.factor(data$jenis_kopi)
 
-# 4. Cek struktur data
+# 4. cek struktur dan ringkasan data untuk memastikan format sudah benar
 head(data)
 str(data)
 summary(data)
 
-# 5. Cek missing value
+# 5. cek jumlah missing value pada setiap kolom data
 colSums(is.na(data))
 
-# 6. Bersihkan missing value jika ada
+# 6. hapus data yang memiliki missing value agar analisis lebih valid
 data_clean <- na.omit(data)
 
-# 7. Cek jumlah data per jenis kopi
+# 7. cek jumlah data pada masing-masing jenis kopi yang tersedia
 table(data_clean$jenis_kopi)
 
-# 8. Statistik deskriptif
+# 8. hitung statistik deskriptif tingkat fokus berdasarkan jenis kopi
 aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, mean)
 aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, sd)
 aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, min)
 aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, max)
 
-# 9. Boxplot
+# 9. buat boxplot untuk melihat distribusi tingkat fokus tiap jenis kopi
 boxplot(
   tingkat_fokus ~ jenis_kopi,
   data = data_clean,
@@ -64,7 +64,7 @@ boxplot(
   ylab = "Tingkat Fokus"
 )
 
-# 10. Deteksi outlier dengan IQR
+# 10. deteksi outlier menggunakan metode interquartile range atau iqr
 Q1 <- quantile(data_clean$tingkat_fokus, 0.25)
 Q3 <- quantile(data_clean$tingkat_fokus, 0.75)
 IQR_value <- IQR(data_clean$tingkat_fokus)
@@ -79,21 +79,21 @@ outlier_data <- data_clean[
 
 outlier_data
 
-# 11. One-Way ANOVA
+# 11. lakukan uji one-way anova untuk membandingkan rata-rata fokus
 anova_model <- aov(tingkat_fokus ~ jenis_kopi, data = data_clean)
 
 summary(anova_model)
 
-# 12. Cek normalitas residual
+# 12. cek normalitas residual sebagai syarat dalam uji anova
 residual_anova <- residuals(anova_model)
 
 shapiro.test(residual_anova)
 
-# 13. Cek homogenitas varians
+# 13. cek homogenitas varians antar kelompok jenis kopi
 bartlett.test(tingkat_fokus ~ jenis_kopi, data = data_clean)
 
-# 14. Tukey HSD
+# 14. lakukan uji lanjut tukey hsd untuk melihat perbedaan kelompok
 TukeyHSD(anova_model)
 
-# 15. Alternatif non-parametrik
+# 15. gunakan uji kruskal wallis sebagai alternatif non-parametrik
 kruskal.test(tingkat_fokus ~ jenis_kopi, data = data_clean)
