@@ -1,80 +1,16 @@
-library(ggplot2)
-library(corrplot)
-library(dplyr)
+# 1. Import data
+data <- read.csv(
+  "D:/kopi.csv",
+  sep = ";",
+  fileEncoding = "UTF-8-BOM",
+  stringsAsFactors = FALSE,
+  check.names = TRUE
+)
 
-# Boxplot tingkat fokus
-ggplot(data_clean, aes(x = jenis_kopi, y = tingkat_fokus, fill = jenis_kopi)) +
-  geom_boxplot() +
-  labs(
-    title = "Boxplot Tingkat Fokus Berdasarkan Jenis Kopi",
-    x = "Jenis Kopi",
-    y = "Tingkat Fokus"
-  ) +
-  theme_minimal()
-
-# Barplot rata-rata fokus
-mean_focus <- data_clean %>%
-  group_by(jenis_kopi) %>%
-  summarise(
-    rata_rata_fokus = mean(tingkat_fokus, na.rm = TRUE)
-  )
-
-ggplot(mean_focus, aes(x = jenis_kopi, y = rata_rata_fokus, fill = jenis_kopi)) +
-  geom_col() +
-  labs(
-    title = "Rata-rata Tingkat Fokus Berdasarkan Jenis Kopi",
-    x = "Jenis Kopi",
-    y = "Rata-rata Tingkat Fokus"
-  ) +
-  theme_minimal()
-
-# Scatter kafein vs fokus
-ggplot(data_clean, aes(x = kafein_mg, y = tingkat_fokus, color = jenis_kopi)) +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(
-    title = "Hubungan Kafein dengan Tingkat Fokus",
-    x = "Kafein (mg)",
-    y = "Tingkat Fokus",
-    color = "Jenis Kopi"
-  ) +
-  theme_minimal()
-
-# Scatter gula vs fokus
-ggplot(data_clean, aes(x = gula_gram, y = tingkat_fokus, color = jenis_kopi)) +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(
-    title = "Hubungan Gula dengan Tingkat Fokus",
-    x = "Gula (gram)",
-    y = "Tingkat Fokus",
-    color = "Jenis Kopi"
-  ) +
-  theme_minimal()
-
-# Histogram tingkat fokus
-ggplot(data_clean, aes(x = tingkat_fokus)) +
-  geom_histogram(bins = 15, fill = "skyblue", color = "black") +
-  labs(
-    title = "Distribusi Tingkat Fokus",
-    x = "Tingkat Fokus",
-    y = "Frekuensi"
-  ) +
-  theme_minimal()
-
-# Histogram per jenis kopi
-ggplot(data_clean, aes(x = tingkat_fokus, fill = jenis_kopi)) +
-  geom_histogram(bins = 12, color = "black", alpha = 0.7) +
-  facet_wrap(~ jenis_kopi) +
-  labs(
-    title = "Distribusi Tingkat Fokus per Jenis Kopi",
-    x = "Tingkat Fokus",
-    y = "Frekuensi"
-  ) +
-  theme_minimal()
-
-# Heatmap korelasi
-numeric_data <- data_clean[, c(
+# 2. Ambil kolom utama
+data <- data[, c(
+  "id",
+  "jenis_kopi",
   "kopi_ml",
   "susu_ml",
   "gula_gram",
@@ -83,28 +19,81 @@ numeric_data <- data_clean[, c(
   "tingkat_fokus"
 )]
 
-cor_matrix <- cor(numeric_data, use = "complete.obs")
-
-corrplot(
-  cor_matrix,
-  method = "color",
-  type = "upper",
-  addCoef.col = "black",
-  tl.col = "black",
-  tl.srt = 45,
-  number.cex = 0.8
+# 3. Ubah kolom numerik
+num_cols <- c(
+  "kopi_ml",
+  "susu_ml",
+  "gula_gram",
+  "kafein_mg",
+  "durasi_tidur_jam",
+  "tingkat_fokus"
 )
 
-# Heatmap alternatif ggplot
-cor_data <- as.data.frame(as.table(cor_matrix))
+data[num_cols] <- lapply(data[num_cols], function(x) {
+  as.numeric(gsub(",", ".", x))
+})
 
-ggplot(cor_data, aes(Var1, Var2, fill = Freq)) +
-  geom_tile() +
-  geom_text(aes(label = round(Freq, 2)), color = "black", size = 4) +
-  labs(
-    title = "Heatmap Korelasi Variabel Numerik",
-    x = "",
-    y = "",
-    fill = "Korelasi"
-  ) +
-  theme_minimal()
+data$jenis_kopi <- as.factor(data$jenis_kopi)
+
+# 4. Cek struktur data
+head(data)
+str(data)
+summary(data)
+
+# 5. Cek missing value
+colSums(is.na(data))
+
+# 6. Bersihkan missing value jika ada
+data_clean <- na.omit(data)
+
+# 7. Cek jumlah data per jenis kopi
+table(data_clean$jenis_kopi)
+
+# 8. Statistik deskriptif
+aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, mean)
+aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, sd)
+aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, min)
+aggregate(tingkat_fokus ~ jenis_kopi, data = data_clean, max)
+
+# 9. Boxplot
+boxplot(
+  tingkat_fokus ~ jenis_kopi,
+  data = data_clean,
+  main = "Tingkat Fokus Berdasarkan Jenis Kopi",
+  xlab = "Jenis Kopi",
+  ylab = "Tingkat Fokus"
+)
+
+# 10. Deteksi outlier dengan IQR
+Q1 <- quantile(data_clean$tingkat_fokus, 0.25)
+Q3 <- quantile(data_clean$tingkat_fokus, 0.75)
+IQR_value <- IQR(data_clean$tingkat_fokus)
+
+lower_bound <- Q1 - 1.5 * IQR_value
+upper_bound <- Q3 + 1.5 * IQR_value
+
+outlier_data <- data_clean[
+  data_clean$tingkat_fokus < lower_bound |
+  data_clean$tingkat_fokus > upper_bound,
+]
+
+outlier_data
+
+# 11. One-Way ANOVA
+anova_model <- aov(tingkat_fokus ~ jenis_kopi, data = data_clean)
+
+summary(anova_model)
+
+# 12. Cek normalitas residual
+residual_anova <- residuals(anova_model)
+
+shapiro.test(residual_anova)
+
+# 13. Cek homogenitas varians
+bartlett.test(tingkat_fokus ~ jenis_kopi, data = data_clean)
+
+# 14. Tukey HSD
+TukeyHSD(anova_model)
+
+# 15. Alternatif non-parametrik
+kruskal.test(tingkat_fokus ~ jenis_kopi, data = data_clean)
